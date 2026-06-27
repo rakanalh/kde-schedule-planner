@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "settings": {
+    "intervalBreaksEnabled": true,
+    "intervalBreakMinutes": 90,
+    "intervalBreakDurationMinutes": 5
+  },
+  "tasks": [
+    {
+      "id": "sample-standup",
+      "title": "Plan & Standup",
+      "color": "#fdbc4b",
+      "days": [1, 2, 3, 4, 5],
+      "start": "09:00",
+      "end": "09:30",
+      "isBreak": false
+    },
+    {
+      "id": "sample-deepwork-am",
+      "title": "Deep Work",
+      "color": "#3daee9",
+      "days": [1, 2, 3, 4, 5],
+      "start": "09:30",
+      "end": "11:30",
+      "isBreak": false
+    },
+    {
+      "id": "sample-break-am",
+      "title": "Coffee break",
+      "color": "#27ae60",
+      "days": [1, 2, 3, 4, 5],
+      "start": "11:30",
+      "end": "11:45",
+      "isBreak": true
+    },
+    {
+      "id": "sample-email",
+      "title": "Email & Reviews",
+      "color": "#f67400",
+      "days": [1, 2, 3, 4, 5],
+      "start": "11:45",
+      "end": "12:30",
+      "isBreak": false
+    },
+    {
+      "id": "sample-lunch",
+      "title": "Lunch",
+      "color": "#1abc9c",
+      "days": [1, 2, 3, 4, 5],
+      "start": "12:30",
+      "end": "13:30",
+      "isBreak": true
+    },
+    {
+      "id": "sample-deepwork-pm",
+      "title": "Deep Work",
+      "color": "#3daee9",
+      "days": [1, 2, 3, 4, 5],
+      "start": "13:30",
+      "end": "16:00",
+      "isBreak": false
+    },
+    {
+      "id": "sample-wrapup",
+      "title": "Wrap-up & Notes",
+      "color": "#9b59b6",
+      "days": [1, 2, 3, 4, 5],
+      "start": "16:00",
+      "end": "17:00",
+      "isBreak": false
+    },
+    {
+      "id": "sample-weekend-reading",
+      "title": "Reading",
+      "color": "#9b59b6",
+      "days": [6, 7],
+      "start": "10:00",
+      "end": "11:30",
+      "isBreak": false
+    }
+  ]
+}

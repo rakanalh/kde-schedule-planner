@@ -1,0 +1,61 @@
+#!/bin/sh
+# Launcher for the Schedule Planner (QML-only Kirigami app).
+# Single-instance: if a window is already open, raise/activate it instead of
+# spawning a second one. The lock is held (via an inherited fd) by the running
+# qml process for its whole lifetime, so the check is race-free.
+
+APP_DIR="${MYSCHEDULE_APP_DIR:-$HOME/.local/share/myschedule/app}"
+MAIN_QML="$APP_DIR/main.qml"
+LOCKFILE="${XDG_RUNTIME_DIR:-/tmp}/myschedule-planner.lock"
+
+if [ ! -f "$MAIN_QML" ]; then
+    echo "myschedule-planner: cannot find $MAIN_QML — did you run install.sh?" >&2
+    exit 1
+fi
+
+# Find a Qt 6 QML runtime across distros.
+for cand in qml6 "/usr/lib64/qt6/bin/qml" "/usr/lib/qt6/bin/qml" "/usr/lib/qt6/bin/qml6" qml; do
+    if command -v "$cand" >/dev/null 2>&1 || [ -x "$cand" ]; then
+        QML_BIN="$cand"
+        break
+    fi
+done
+if [ -z "$QML_BIN" ]; then
+    echo "myschedule-planner: no Qt6 'qml' runtime found (install qt6-qtdeclarative)." >&2
+    exit 1
+fi
+
+# Ask KWin to raise + focus the already-open window (best effort, Wayland-safe).
+activate_existing() {
+    [ -z "$(command -v gdbus)" ] && return
+    js="$(mktemp "${TMPDIR:-/tmp}/mysched-activate.XXXXXX.js")"
+    cat > "$js" <<'JS'
+var ws = workspace.windowList ? workspace.windowList() : workspace.clientList();
+for (var i = 0; i < ws.length; i++) {
+    if (ws[i].caption && ws[i].caption.indexOf("Schedule Planner") !== -1) {
+        ws[i].minimized = false;
+        workspace.activeWindow = ws[i];
+    }
+}
+JS
+    id="mysched-activate-$$"
+    gdbus call --session --dest org.kde.KWin --object-path /Scripting \
+        --method org.kde.kwin.Scripting.loadScript "$js" "$id" >/dev/null 2>&1
+    gdbus call --session --dest org.kde.KWin --object-path /Scripting \
+        --method org.kde.kwin.Scripting.start >/dev/null 2>&1
+    ( sleep 1
+      gdbus call --session --dest org.kde.KWin --object-path /Scripting \
+          --method org.kde.kwin.Scripting.unloadScript "$id" >/dev/null 2>&1
+      rm -f "$js" ) &
+}
+
+# Single-instance gate: grab an exclusive lock; if it's already held, the app
+# is running — activate that window and bail.
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    activate_existing
+    exit 0
+fi
+
+# We hold the lock; qml inherits fd 9 and keeps it for its lifetime.
+exec "$QML_BIN" --apptype gui "$MAIN_QML" "$@"

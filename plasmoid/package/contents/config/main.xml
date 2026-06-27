@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="timelineStartHour" type="Int">
+      <label>First hour shown on the timeline.</label>
+      <default>6</default>
+      <min>0</min>
+      <max>23</max>
+    </entry>
+    <entry name="timelineEndHour" type="Int">
+      <label>Last hour shown on the timeline.</label>
+      <default>23</default>
+      <min>1</min>
+      <max>24</max>
+    </entry>
+    <entry name="plannerCommand" type="String">
+      <label>Command used to launch the standalone planner.</label>
+      <default>myschedule-planner</default>
+    </entry>
+    <entry name="showProgressBar" type="Bool">
+      <label>Show a progress bar for the current task on the panel.</label>
+      <default>true</default>
+    </entry>
+  </group>
+</kcfg>

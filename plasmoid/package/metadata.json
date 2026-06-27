@@ -1,0 +1,20 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Id": "org.kde.myschedule",
+        "Name": "My Schedule",
+        "Description": "Plan your day in time blocks and see what to work on right now",
+        "Icon": "myschedule",
+        "Category": "Utilities",
+        "License": "GPL-3.0-or-later",
+        "Version": "0.1.0",
+        "Authors": [
+            {
+                "Name": "rakanalh",
+                "Email": "rakan.alhneiti@gmail.com"
+            }
+        ],
+        "EnabledByDefault": true
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

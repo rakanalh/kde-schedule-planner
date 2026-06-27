@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Schedule Planner
+GenericName=Day Planner
+Comment=Plan your day in time blocks
+Icon=myschedule
+Exec=myschedule-planner
+Terminal=false
+Categories=Office;Calendar;
+Keywords=schedule;plan;timeblock;timeline;tasks;day;
+StartupNotify=true
+# The qml runtime hardcodes this Wayland app_id; matching it here lets Plasma
+# show our icon for the window instead of the generic Qt icon.
+StartupWMClass=org.qt-project.qml
