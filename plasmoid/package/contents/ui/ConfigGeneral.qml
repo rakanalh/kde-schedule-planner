@@ -12,6 +12,7 @@ KCMUtils.SimpleKCM {
     property alias cfg_timelineEndHour: endHour.value
     property alias cfg_plannerCommand: plannerCommand.text
     property alias cfg_showProgressBar: showProgressBar.checked
+    property alias cfg_playSound: playSound.checked
 
     Kirigami.FormLayout {
         QQC2.SpinBox {
@@ -30,6 +31,11 @@ KCMUtils.SimpleKCM {
             id: showProgressBar
             Kirigami.FormData.label: i18n("Panel display:")
             text: i18n("Show progress bar for the current task")
+        }
+        QQC2.CheckBox {
+            id: playSound
+            Kirigami.FormData.label: i18n("Notifications:")
+            text: i18n("Ring a bell when a notification fires")
         }
         QQC2.TextField {
             id: plannerCommand

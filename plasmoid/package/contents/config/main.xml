@@ -26,5 +26,9 @@
       <label>Show a progress bar for the current task on the panel.</label>
       <default>true</default>
     </entry>
+    <entry name="playSound" type="Bool">
+      <label>Play a bell sound when a notification fires.</label>
+      <default>true</default>
+    </entry>
   </group>
 </kcfg>

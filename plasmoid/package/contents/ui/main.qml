@@ -140,6 +140,10 @@ PlasmoidItem {
 
     function notify(title, text, icon) {
         _run("notify-send --app-name=" + _shq("Schedule Planner") + " --icon=" + _shq(icon || "myschedule") + " " + _shq(title) + " " + _shq(text));
+        if (Plasmoid.configuration.playSound) {
+            // ring a bell so it's audible away from the screen; fall back to paplay
+            _run("canberra-gtk-play -i bell 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null");
+        }
     }
 
     function launchPlanner() {
