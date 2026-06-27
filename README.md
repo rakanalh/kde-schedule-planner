@@ -8,6 +8,8 @@ Nothing in the KDE ecosystem combined these; existing widgets either read an
 external calendar, time pomodoros, or nag you to take breaks on a fixed interval.
 This ties them together around a plan you write.
 
+![Screenshot](/screenshot.png)
+
 ## What you get
 
 | Piece | What it does |
