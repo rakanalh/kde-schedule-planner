@@ -50,15 +50,14 @@ ColumnLayout {
             readonly property bool isTask: modelData.kind === "task"
             readonly property bool isFree: !isTask
             readonly property var task: modelData.task
-            readonly property bool isCurrent: tl.highlightNow && isTask
-                && modelData.startMin <= tl.nowMin && tl.nowMin < modelData.endMin
+            readonly property bool isCurrent: tl.highlightNow && isTask && modelData.startMin <= tl.nowMin && tl.nowMin < modelData.endMin
             // a task whose end time has already passed today
-            readonly property bool isPast: tl.highlightNow && isTask
-                && tl.nowMin >= modelData.endMin
+            readonly property bool isPast: tl.highlightNow && isTask && tl.nowMin >= modelData.endMin
 
             hoverEnabled: isFree
             cursorShape: isFree ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: if (isFree) tl.freeSlotClicked(modelData.startMin, modelData.endMin)
+            onClicked: if (isFree)
+                tl.freeSlotClicked(modelData.startMin, modelData.endMin)
 
             // hover highlight to show a free slot is clickable
             Rectangle {

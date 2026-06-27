@@ -32,10 +32,7 @@ Kirigami.Dialog {
     property var selectedDays: []
     property string selectedColor: palette[0]
 
-    readonly property var palette: [
-        "#3daee9", "#27ae60", "#f67400", "#da4453",
-        "#9b59b6", "#1abc9c", "#fdbc4b", "#7f8c8d"
-    ]
+    readonly property var palette: ["#3daee9", "#27ae60", "#f67400", "#da4453", "#9b59b6", "#1abc9c", "#fdbc4b", "#7f8c8d"]
 
     title: editId === "" ? i18n("Add task") : i18n("Edit task")
     preferredWidth: Kirigami.Units.gridUnit * 26
@@ -59,8 +56,10 @@ Kirigami.Dialog {
             titleField.text = "";
             selectedColor = palette[0];
             selectedDays = [Sched.isoDay(new Date())];
-            startHour.value = 9; startMin.value = 0;
-            endHour.value = 10; endMin.value = 0;
+            startHour.value = 9;
+            startMin.value = 0;
+            endHour.value = 10;
+            endMin.value = 0;
             breakSwitch.checked = false;
             notifySwitch.checked = true;
             leadBox.value = 0;
@@ -80,7 +79,8 @@ Kirigami.Dialog {
         selectedDays = [prefill.iso];
         var sM = prefill.startMin;
         var eM = Math.min(sM + 60, prefill.endMin, 23 * 60 + 59);
-        if (eM <= sM) eM = Math.min(sM + 30, 23 * 60 + 59);
+        if (eM <= sM)
+            eM = Math.min(sM + 30, 23 * 60 + 59);
         setTime(startHour, startMin, Sched.minutesToHHMM(sM));
         setTime(endHour, endMin, Sched.minutesToHHMM(eM));
         open();
@@ -98,11 +98,11 @@ Kirigami.Dialog {
     readonly property string startStr: fmt(startHour, startMin)
     readonly property string endStr: fmt(endHour, endMin)
     readonly property bool timesValid: Sched.toMinutes(endStr) > Sched.toMinutes(startStr)
-    readonly property bool formValid: titleField.text.trim().length > 0
-        && selectedDays.length > 0 && timesValid
+    readonly property bool formValid: titleField.text.trim().length > 0 && selectedDays.length > 0 && timesValid
 
     onAccepted: {
-        if (!formValid) return;
+        if (!formValid)
+            return;
         dialog.taskAccepted({
             id: editId === "" ? Sched.genId() : editId,
             title: titleField.text.trim(),
@@ -117,7 +117,9 @@ Kirigami.Dialog {
     }
 
     // disable OK while invalid
-    Component.onCompleted: standardButton(Kirigami.Dialog.Ok).enabled = Qt.binding(function () { return formValid; })
+    Component.onCompleted: standardButton(Kirigami.Dialog.Ok).enabled = Qt.binding(function () {
+        return formValid;
+    })
 
     ColumnLayout {
         spacing: Kirigami.Units.largeSpacing
@@ -133,15 +135,41 @@ Kirigami.Dialog {
 
             RowLayout {
                 Kirigami.FormData.label: i18n("From:")
-                QQC2.SpinBox { id: startHour; from: 0; to: 23; editable: true }
-                QQC2.Label { text: ":" }
-                QQC2.SpinBox { id: startMin; from: 0; to: 59; stepSize: 5; editable: true }
+                QQC2.SpinBox {
+                    id: startHour
+                    from: 0
+                    to: 23
+                    editable: true
+                }
+                QQC2.Label {
+                    text: ":"
+                }
+                QQC2.SpinBox {
+                    id: startMin
+                    from: 0
+                    to: 59
+                    stepSize: 5
+                    editable: true
+                }
             }
             RowLayout {
                 Kirigami.FormData.label: i18n("To:")
-                QQC2.SpinBox { id: endHour; from: 0; to: 23; editable: true }
-                QQC2.Label { text: ":" }
-                QQC2.SpinBox { id: endMin; from: 0; to: 59; stepSize: 5; editable: true }
+                QQC2.SpinBox {
+                    id: endHour
+                    from: 0
+                    to: 23
+                    editable: true
+                }
+                QQC2.Label {
+                    text: ":"
+                }
+                QQC2.SpinBox {
+                    id: endMin
+                    from: 0
+                    to: 59
+                    stepSize: 5
+                    editable: true
+                }
             }
 
             QQC2.Switch {
@@ -163,7 +191,9 @@ Kirigami.Dialog {
                 from: 0
                 to: 120
                 stepSize: 5
-                textFromValue: function (v) { return v === 0 ? i18n("at start time") : v + i18n(" min before"); }
+                textFromValue: function (v) {
+                    return v === 0 ? i18n("at start time") : v + i18n(" min before");
+                }
             }
         }
 
@@ -175,7 +205,10 @@ Kirigami.Dialog {
         }
 
         // ---- days ----
-        QQC2.Label { text: i18n("Repeat on:"); font.bold: true }
+        QQC2.Label {
+            text: i18n("Repeat on:")
+            font.bold: true
+        }
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
@@ -190,7 +223,10 @@ Kirigami.Dialog {
                     onClicked: {
                         var d = dialog.selectedDays.slice();
                         var at = d.indexOf(iso);
-                        if (at === -1) d.push(iso); else d.splice(at, 1);
+                        if (at === -1)
+                            d.push(iso);
+                        else
+                            d.splice(at, 1);
                         dialog.selectedDays = d;
                     }
                 }
@@ -199,21 +235,27 @@ Kirigami.Dialog {
         RowLayout {
             spacing: Kirigami.Units.smallSpacing
             QQC2.Button {
-                text: i18n("Every day"); flat: true
+                text: i18n("Every day")
+                flat: true
                 onClicked: dialog.selectedDays = [1, 2, 3, 4, 5, 6, 7]
             }
             QQC2.Button {
-                text: i18n("Weekdays"); flat: true
+                text: i18n("Weekdays")
+                flat: true
                 onClicked: dialog.selectedDays = [1, 2, 3, 4, 5]
             }
             QQC2.Button {
-                text: i18n("Clear"); flat: true
+                text: i18n("Clear")
+                flat: true
                 onClicked: dialog.selectedDays = []
             }
         }
 
         // ---- color ----
-        QQC2.Label { text: i18n("Color:"); font.bold: true }
+        QQC2.Label {
+            text: i18n("Color:")
+            font.bold: true
+        }
         RowLayout {
             spacing: Kirigami.Units.smallSpacing
             Repeater {

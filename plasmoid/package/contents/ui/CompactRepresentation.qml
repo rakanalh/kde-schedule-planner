@@ -3,11 +3,9 @@
  * on right now, with a thin progress bar. Click to open the timeline popup.
  */
 import QtQuick
-import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
-import "../code/schedule.js" as Sched
 
 MouseArea {
     id: compact
@@ -40,35 +38,19 @@ MouseArea {
             border.color: Kirigami.Theme.backgroundColor
         }
 
-        ColumnLayout {
-            spacing: 0
+        // title and remaining time on a single line so it fits the panel height
+        Kirigami.Heading {
+            level: 5
             Layout.alignment: Qt.AlignVCenter
-
-            Kirigami.Heading {
-                level: 5
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-                text: compact.task
-                    ? compact.task.title
-                    : (compact.next ? i18n("Free until %1", compact.next.start) : i18n("Free"))
-            }
-            QQC2.Label {
-                visible: compact.task !== null
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-                opacity: 0.75
-                font: Kirigami.Theme.smallFont
-                text: compact.task
-                    ? i18np("%1 min left", "%1 min left", plasmoidItem.remainingMinutes)
-                    : ""
-            }
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+            text: compact.task ? compact.task.title + " · " + i18np("%1 min left", "%1 min left", plasmoidItem.remainingMinutes) : (compact.next ? i18n("Free until %1", compact.next.start) : i18n("Free"))
         }
     }
 
     // thin progress bar pinned to the bottom of the pill
     Rectangle {
-        visible: plasmoidItem && plasmoidItem.Plasmoid.configuration.showProgressBar
-                 && compact.task !== null
+        visible: plasmoidItem && plasmoidItem.Plasmoid.configuration.showProgressBar && compact.task !== null
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

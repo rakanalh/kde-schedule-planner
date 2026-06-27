@@ -43,9 +43,12 @@ Kirigami.ApplicationWindow {
             app.refreshDerived();
         }
         onSaveDone: function (ok) {
-            if (!ok) showPassiveError(i18n("Could not save the schedule."));
+            if (!ok)
+                showPassiveError(i18n("Could not save the schedule."));
         }
-        onParseError: function (msg) { showPassiveError(msg); }
+        onParseError: function (msg) {
+            showPassiveError(msg);
+        }
     }
 
     function refreshDerived() {
@@ -63,15 +66,23 @@ Kirigami.ApplicationWindow {
         var tasks = schedule.tasks.slice();
         var idx = -1;
         for (var i = 0; i < tasks.length; i++) {
-            if (tasks[i].id === task.id) { idx = i; break; }
+            if (tasks[i].id === task.id) {
+                idx = i;
+                break;
+            }
         }
-        if (idx >= 0) tasks[idx] = task; else tasks.push(task);
+        if (idx >= 0)
+            tasks[idx] = task;
+        else
+            tasks.push(task);
         schedule.tasks = tasks;
         commit();
     }
 
     function removeTask(id) {
-        schedule.tasks = schedule.tasks.filter(function (t) { return t.id !== id; });
+        schedule.tasks = schedule.tasks.filter(function (t) {
+            return t.id !== id;
+        });
         commit();
     }
 
@@ -82,7 +93,9 @@ Kirigami.ApplicationWindow {
     // ---- editor dialog ---------------------------------------------------
     TaskEditor {
         id: editor
-        onTaskAccepted: function (task) { app.addOrUpdateTask(task); }
+        onTaskAccepted: function (task) {
+            app.addOrUpdateTask(task);
+        }
     }
 
     SettingsDialog {
@@ -114,10 +127,18 @@ Kirigami.ApplicationWindow {
         conflicts: app.conflicts
         onAddRequested: editor.openFor(null)
         onAddInSlotRequested: function (startMin, endMin, iso) {
-            editor.openNew({ startMin: startMin, endMin: endMin, iso: iso });
+            editor.openNew({
+                startMin: startMin,
+                endMin: endMin,
+                iso: iso
+            });
         }
-        onEditRequested: function (task) { editor.openFor(task); }
-        onDeleteRequested: function (id) { app.removeTask(id); }
+        onEditRequested: function (task) {
+            editor.openFor(task);
+        }
+        onDeleteRequested: function (id) {
+            app.removeTask(id);
+        }
         onSettingsRequested: settingsDialog.openWith(app.schedule.settings)
     }
 

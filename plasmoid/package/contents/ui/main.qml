@@ -32,14 +32,9 @@ PlasmoidItem {
     property int _trackedIso: -1          // reset per-day state when the date rolls over
 
     Plasmoid.icon: "myschedule"
-    Plasmoid.status: currentTask
-        ? PlasmaCore.Types.ActiveStatus
-        : PlasmaCore.Types.PassiveStatus
+    Plasmoid.status: currentTask ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
     toolTipMainText: currentTask ? currentTask.title : i18n("My Schedule")
-    toolTipSubText: currentTask
-        ? Sched.rangeLabel(currentTask) + " · " + remainingMinutes + i18n(" min left")
-        : (nextTask ? i18n("Next: %1 at %2", nextTask.title, nextTask.start)
-                    : i18n("Nothing scheduled"))
+    toolTipSubText: currentTask ? Sched.rangeLabel(currentTask) + " · " + remainingMinutes + i18n(" min left") : (nextTask ? i18n("Next: %1 at %2", nextTask.title, nextTask.start) : i18n("Nothing scheduled"))
 
     Storage {
         id: storage
@@ -59,10 +54,14 @@ PlasmoidItem {
         id: exec
         engine: "executable"
         connectedSources: []
-        onNewData: function (source) { exec.disconnectSource(source); }
+        onNewData: function (source) {
+            exec.disconnectSource(source);
+        }
     }
     property int _cmdNonce: 0
-    function _shq(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; }
+    function _shq(s) {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'";
+    }
     function _run(cmd) {
         root._cmdNonce += 1;
         exec.connectSource(cmd + " # " + root._cmdNonce);
@@ -92,9 +91,7 @@ PlasmoidItem {
 
         currentTask = Sched.currentTask(schedule, d);
         nextTask = Sched.nextTask(schedule, d);
-        todayEntries = Sched.timeline(schedule, iso,
-                                      Plasmoid.configuration.timelineStartHour * 60,
-                                      Plasmoid.configuration.timelineEndHour * 60);
+        todayEntries = Sched.timeline(schedule, iso, Plasmoid.configuration.timelineStartHour * 60, Plasmoid.configuration.timelineEndHour * 60);
         currentProgress = Sched.progress(currentTask, d);
         var rem = Sched.remainingMinutes(currentTask, d);
         remainingMinutes = rem === null ? 0 : rem;
@@ -120,15 +117,11 @@ PlasmoidItem {
                 _notifiedToday[t.id] = true;
                 if (t.isBreak) {
                     _lastIntervalMin = nowMin; // a planned break resets the interval clock
-                    notify(i18n("Take a break"),
-                           t.title + " · " + Sched.rangeLabel(t), "media-playback-pause");
+                    notify(i18n("Take a break"), t.title + " · " + Sched.rangeLabel(t), "media-playback-pause");
                 } else if (t.leadMinutes > 0) {
-                    notify(t.title,
-                           i18n("Starts in %1 min — at %2", t.leadMinutes, t.start),
-                           "appointment-soon");
+                    notify(t.title, i18n("Starts in %1 min — at %2", t.leadMinutes, t.start), "appointment-soon");
                 } else {
-                    notify(t.title,
-                           i18n("Starting now · %1", Sched.rangeLabel(t)), "appointment-new");
+                    notify(t.title, i18n("Starting now · %1", Sched.rangeLabel(t)), "appointment-new");
                 }
             }
         }
@@ -140,17 +133,13 @@ PlasmoidItem {
                 _lastIntervalMin = nowMin;
             } else if (nowMin - _lastIntervalMin >= st.intervalBreakMinutes) {
                 _lastIntervalMin = nowMin;
-                notify(i18n("Take a break"),
-                       i18n("You've been at it for %1 minutes — stand up and stretch.",
-                            st.intervalBreakMinutes), "media-playback-pause");
+                notify(i18n("Take a break"), i18n("You've been at it for %1 minutes — stand up and stretch.", st.intervalBreakMinutes), "media-playback-pause");
             }
         }
     }
 
     function notify(title, text, icon) {
-        _run("notify-send --app-name=" + _shq("Schedule Planner")
-             + " --icon=" + _shq(icon || "myschedule")
-             + " " + _shq(title) + " " + _shq(text));
+        _run("notify-send --app-name=" + _shq("Schedule Planner") + " --icon=" + _shq(icon || "myschedule") + " " + _shq(title) + " " + _shq(text));
     }
 
     function launchPlanner() {
@@ -161,15 +150,18 @@ PlasmoidItem {
         // If it's a bare command name, don't depend on plasmashell's PATH —
         // try it, but fall back to the absolute install location.
         if (cmd.indexOf("/") === -1) {
-            _run("command -v " + cmd + " >/dev/null 2>&1 && exec " + cmd
-                 + " || exec \"$HOME/.local/bin/" + cmd + "\"");
+            _run("command -v " + cmd + " >/dev/null 2>&1 && exec " + cmd + " || exec \"$HOME/.local/bin/" + cmd + "\"");
         } else {
             _run(cmd);
         }
     }
 
-    compactRepresentation: CompactRepresentation { plasmoidItem: root }
-    fullRepresentation: FullRepresentation { plasmoidItem: root }
+    compactRepresentation: CompactRepresentation {
+        plasmoidItem: root
+    }
+    fullRepresentation: FullRepresentation {
+        plasmoidItem: root
+    }
 
     PlasmaCore.Action {
         id: planAction

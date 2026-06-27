@@ -29,11 +29,11 @@ Kirigami.ScrollablePage {
     property var schedule
     property var conflicts: []
 
-    signal addRequested()
+    signal addRequested
     signal addInSlotRequested(int startMin, int endMin, int iso)
     signal editRequested(var task)
     signal deleteRequested(string id)
-    signal settingsRequested()
+    signal settingsRequested
 
     title: i18n("My Day Plan")
 
@@ -70,13 +70,14 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
             type: Kirigami.MessageType.Warning
             visible: page.conflicts.length > 0
-            text: i18np("%1 overlapping block on one of your days.",
-                        "%1 overlapping blocks across your days.",
-                        page.conflicts.length)
+            text: i18np("%1 overlapping block on one of your days.", "%1 overlapping blocks across your days.", page.conflicts.length)
         }
 
         // ---- weekday selector ----
-        Kirigami.Heading { level: 3; text: i18n("Preview") }
+        Kirigami.Heading {
+            level: 3
+            text: i18n("Preview")
+        }
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
@@ -91,7 +92,9 @@ Kirigami.ScrollablePage {
                     onClicked: page.previewIso = iso
                 }
             }
-            Item { Layout.fillWidth: true }
+            Item {
+                Layout.fillWidth: true
+            }
         }
 
         TimelinePreview {
@@ -104,10 +107,15 @@ Kirigami.ScrollablePage {
             }
         }
 
-        Kirigami.Separator { Layout.fillWidth: true }
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
 
         // ---- all task blocks ----
-        Kirigami.Heading { level: 3; text: i18n("All blocks") }
+        Kirigami.Heading {
+            level: 3
+            text: i18n("All blocks")
+        }
 
         Kirigami.PlaceholderMessage {
             Layout.fillWidth: true
@@ -192,11 +200,17 @@ Kirigami.ScrollablePage {
     }
 
     function daysLabel(days) {
-        if (!days || days.length === 0) return i18n("no days");
-        if (days.length === 7) return i18n("Every day");
+        if (!days || days.length === 0)
+            return i18n("no days");
+        if (days.length === 7)
+            return i18n("Every day");
         var wd = [1, 2, 3, 4, 5];
-        if (days.length === 5 && wd.every(function (d) { return days.indexOf(d) !== -1; }))
+        if (days.length === 5 && wd.every(function (d) {
+            return days.indexOf(d) !== -1;
+        }))
             return i18n("Weekdays");
-        return days.map(function (d) { return Sched.dayName(d); }).join(", ");
+        return days.map(function (d) {
+            return Sched.dayName(d);
+        }).join(", ");
     }
 }

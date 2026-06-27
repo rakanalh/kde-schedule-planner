@@ -71,15 +71,23 @@ Kirigami.Dialog {
                 id: everyBox
                 Kirigami.FormData.label: i18n("Remind every:")
                 enabled: enabledSwitch.checked
-                from: 5; to: 480; stepSize: 5
-                textFromValue: function (v) { return v + " min"; }
+                from: 5
+                to: 480
+                stepSize: 5
+                textFromValue: function (v) {
+                    return v + " min";
+                }
             }
             QQC2.SpinBox {
                 id: durationBox
                 Kirigami.FormData.label: i18n("Break length:")
                 enabled: enabledSwitch.checked
-                from: 1; to: 60; stepSize: 1
-                textFromValue: function (v) { return v + " min"; }
+                from: 1
+                to: 60
+                stepSize: 1
+                textFromValue: function (v) {
+                    return v + " min";
+                }
             }
         }
     }

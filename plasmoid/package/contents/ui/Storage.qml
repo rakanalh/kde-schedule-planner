@@ -14,9 +14,7 @@ Item {
     id: storage
 
     // ~/.config/myschedule — lives under config so it can go in a dotfiles repo
-    readonly property string dirPath:
-        Platform.StandardPaths.writableLocation(Platform.StandardPaths.GenericConfigLocation)
-            .toString().replace("file://", "") + "/myschedule"
+    readonly property string dirPath: Platform.StandardPaths.writableLocation(Platform.StandardPaths.GenericConfigLocation).toString().replace("file://", "") + "/myschedule"
     readonly property string filePath: dirPath + "/schedule.json"
 
     signal loaded(var schedule)
@@ -34,7 +32,8 @@ Item {
             var cb = storage._callbacks[source];
             delete storage._callbacks[source];
             exec.disconnectSource(source);
-            if (cb) cb(data);
+            if (cb)
+                cb(data);
         }
     }
 
@@ -53,29 +52,26 @@ Item {
     }
 
     function load() {
-        _run("mkdir -p " + _shq(dirPath) + " && cat " + _shq(filePath) + " 2>/dev/null",
-             function (data) {
-                 var raw = (data["stdout"] || "").trim();
-                 var obj = {};
-                 if (raw.length > 0) {
-                     try {
-                         obj = JSON.parse(raw);
-                     } catch (e) {
-                         storage.parseError("Could not parse schedule.json: " + e);
-                         obj = {};
-                     }
-                 }
-                 storage.loaded(Sched.normalize(obj));
-             });
+        _run("mkdir -p " + _shq(dirPath) + " && cat " + _shq(filePath) + " 2>/dev/null", function (data) {
+            var raw = (data["stdout"] || "").trim();
+            var obj = {};
+            if (raw.length > 0) {
+                try {
+                    obj = JSON.parse(raw);
+                } catch (e) {
+                    storage.parseError("Could not parse schedule.json: " + e);
+                    obj = {};
+                }
+            }
+            storage.loaded(Sched.normalize(obj));
+        });
     }
 
     function save(schedule) {
         var payload = JSON.stringify(Sched.normalize(schedule), null, 2);
         var b64 = Qt.btoa(payload);
-        _run("mkdir -p " + _shq(dirPath) + " && printf %s " + _shq(b64)
-             + " | base64 -d > " + _shq(filePath),
-             function (data) {
-                 storage.saveDone(data["exit code"] === 0);
-             });
+        _run("mkdir -p " + _shq(dirPath) + " && printf %s " + _shq(b64) + " | base64 -d > " + _shq(filePath), function (data) {
+            storage.saveDone(data["exit code"] === 0);
+        });
     }
 }
