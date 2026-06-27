@@ -1,0 +1,10 @@
+# Personal docs symlink (points to a local Obsidian vault)
+/docs
+
+# OpenSpec local tooling
+/openspec/
+
+# Editor / OS cruft
+*.swp
+*~
+.DS_Store

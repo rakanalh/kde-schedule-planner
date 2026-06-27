@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Format, lint & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Brain unit tests
+        run: node tests/test_schedule.js
+
+      - name: JS syntax (shared/schedule.js)
+        run: node --check shared/schedule.js
+
+      - name: Validate sample-schedule.json
+        run: node -e "JSON.parse(require('fs').readFileSync('sample-schedule.json','utf8'))"
+
+      - name: Shell script syntax
+        run: |
+          for f in install.sh uninstall.sh app/myschedule-planner; do
+            echo "checking $f"; bash -n "$f"
+          done
+
+      - name: Install Qt 6 QML tools (qmlformat)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-declarative-dev-tools
+
+      - name: QML formatting (qmlformat)
+        run: |
+          QF="$(command -v qmlformat6 || command -v qmlformat || true)"
+          for d in /usr/lib/qt6/bin /usr/lib/x86_64-linux-gnu/qt6/bin /usr/lib64/qt6/bin; do
+            [ -x "$d/qmlformat" ] && QF="$d/qmlformat"
+          done
+          if [ -z "$QF" ]; then echo "qmlformat not found"; exit 1; fi
+          echo "using $QF"
+          status=0
+          for f in $(find app plasmoid -name '*.qml' | sort); do
+            if ! "$QF" "$f" | diff -q "$f" - >/dev/null; then
+              echo "::error file=$f::not formatted — run ./scripts/check.sh locally"
+              status=1
+            fi
+          done
+          exit $status

@@ -1,5 +1,7 @@
 # My Schedule
 
+[![CI](https://github.com/rakanalh/kde-schedule-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/rakanalh/kde-schedule-planner/actions/workflows/ci.yml)
+
 A KDE Plasma 6 day planner built around a single source of truth: **your authored
 day plan** drives everything — the panel widget that tells you what to work on
 right now, a vertical timeline of today, and "take a break" popups.
@@ -65,11 +67,19 @@ should be on your `PATH` for the launch-from-widget button.
 ## Develop / test
 
 ```sh
+./scripts/check.sh                   # format + lint + tests (run before pushing)
+
+# or individually:
 node tests/test_schedule.js          # unit-test the brain
 qmllint -I /usr/lib64/qt6/qml app/*.qml plasmoid/package/contents/ui/*.qml
+qmlformat -i app/*.qml               # canonical formatting
 QT_QPA_PLATFORM=offscreen QT_FORCE_STDERR_LOGGING=1 \
     /usr/lib64/qt6/bin/qml app/main.qml   # headless load (surfaces runtime errors)
 ```
+
+CI runs the brain tests, JSON/shell syntax checks, and QML formatting on every
+push ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). qmllint needs the
+Plasma QML modules, so it runs locally via `scripts/check.sh`.
 
 After editing `shared/schedule.js`, re-run `./install.sh` to copy it into both
 packages (they hold copies, not symlinks, because the plasmoid is installed by
