@@ -36,7 +36,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qt6-declarative-dev-tools
 
-      - name: QML formatting (qmlformat)
+      - name: QML parses cleanly (qmlformat)
+        # A parse check, not an exact-format match: qmlformat's canonical output
+        # varies by Qt version, so strict formatting is enforced locally by
+        # scripts/check.sh (known version). Here we just assert every QML file
+        # is syntactically valid.
         run: |
           QF="$(command -v qmlformat6 || command -v qmlformat || true)"
           for d in /usr/lib/qt6/bin /usr/lib/x86_64-linux-gnu/qt6/bin /usr/lib64/qt6/bin; do
@@ -46,8 +50,8 @@ jobs:
           echo "using $QF"
           status=0
           for f in $(find app plasmoid -name '*.qml' | sort); do
-            if ! "$QF" "$f" | diff -q "$f" - >/dev/null; then
-              echo "::error file=$f::not formatted — run ./scripts/check.sh locally"
+            if ! "$QF" "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::QML failed to parse"
               status=1
             fi
           done
