@@ -27,9 +27,11 @@ PlasmoidItem {
     property date now: new Date()
 
     // ---- notification bookkeeping ----------------------------------------
-    property var _notifiedToday: ({})     // task.id → true once its reminder fired today
-    property int _lastIntervalMin: -1     // minutesOfDay of last interval nudge
+    property var _notifiedToday: ({})     // id → true once its reminder fired today
     property int _trackedIso: -1          // reset per-day state when the date rolls over
+    property string _lastCurrentId: ""    // for the "task changed" chime
+    property bool _currentInit: false     // skip the chime on the very first tick
+    property bool _soundThisTick: false   // collect all sound triggers, ring once
 
     Plasmoid.icon: "myschedule"
     Plasmoid.status: currentTask ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
@@ -86,7 +88,6 @@ PlasmoidItem {
         if (iso !== _trackedIso) {
             _trackedIso = iso;
             _notifiedToday = {};
-            _lastIntervalMin = Sched.minutesOfDay(d); // don't fire instantly on rollover
         }
 
         currentTask = Sched.currentTask(schedule, d);
@@ -96,7 +97,23 @@ PlasmoidItem {
         var rem = Sched.remainingMinutes(currentTask, d);
         remainingMinutes = rem === null ? 0 : rem;
 
+        _soundThisTick = false;
+
+        // Audible cue when the widget auto-switches the current task (but not on
+        // the first tick after loading — that's initialisation, not a change).
+        var curId = currentTask ? currentTask.id : "";
+        if (_currentInit && curId !== _lastCurrentId && Plasmoid.configuration.playSound) {
+            _soundThisTick = true;
+        }
+        _lastCurrentId = curId;
+        _currentInit = true;
+
         evaluateNotifications(d);
+
+        // Ring at most once per tick, whatever combination of triggers fired.
+        if (_soundThisTick) {
+            playBell();
+        }
     }
 
     function evaluateNotifications(d) {
@@ -116,7 +133,6 @@ PlasmoidItem {
             if (nowMin >= rm && nowMin - rm <= 1) {
                 _notifiedToday[t.id] = true;
                 if (t.isBreak) {
-                    _lastIntervalMin = nowMin; // a planned break resets the interval clock
                     notify(i18n("Take a break"), t.title + " · " + Sched.rangeLabel(t), "media-playback-pause");
                 } else if (t.leadMinutes > 0) {
                     notify(t.title, i18n("Starts in %1 min — at %2", t.leadMinutes, t.start), "appointment-soon");
@@ -126,23 +142,61 @@ PlasmoidItem {
             }
         }
 
-        // 2) Interval nudge (independent of the plan), if enabled.
+        // 2) Interval breaks: only while working on a task, counted within it.
+        //    Fire at taskStart + k*interval as long as that's before the task
+        //    ends — so a task shorter than the interval never triggers one, and
+        //    free time or breaks never do (you're already resting).
         var st = schedule.settings || {};
-        if (st.intervalBreaksEnabled && st.intervalBreakMinutes > 0) {
-            if (_lastIntervalMin < 0) {
-                _lastIntervalMin = nowMin;
-            } else if (nowMin - _lastIntervalMin >= st.intervalBreakMinutes) {
-                _lastIntervalMin = nowMin;
-                notify(i18n("Take a break"), i18n("You've been at it for %1 minutes — stand up and stretch.", st.intervalBreakMinutes), "media-playback-pause");
+        if (st.intervalBreaksEnabled && st.intervalBreakMinutes > 0 && currentTask && !currentTask.isBreak) {
+            var taskStart = Sched.toMinutes(currentTask.start);
+            var taskEnd = Sched.effectiveEndMinute(currentTask);
+            var step = st.intervalBreakMinutes;
+            for (var k = 1; taskStart + k * step < taskEnd; k++) {
+                var breakAt = taskStart + k * step;
+                var key = "ib-" + currentTask.id + "-" + k;
+                if (_notifiedToday[key]) {
+                    continue;
+                }
+                if (nowMin >= breakAt && nowMin - breakAt <= 1) {
+                    _notifiedToday[key] = true;
+                    notify(i18n("Take a break"), i18n("You've been on “%1” for %2 minutes — stand up and stretch.", currentTask.title, k * step), "media-playback-pause");
+                }
+            }
+        }
+
+        // 3) One-time reminders for today's date: a persistent notification
+        //    (stays until dismissed) that always rings, regardless of the widget.
+        var oneTimers = Sched.oneTimeTasksOnDate(schedule, d);
+        for (var j = 0; j < oneTimers.length; j++) {
+            var ot = oneTimers[j];
+            if (!ot.notify || _notifiedToday[ot.id]) {
+                continue;
+            }
+            var otMin = Sched.toMinutes(ot.time);
+            if (nowMin >= otMin && nowMin - otMin <= 1) {
+                _notifiedToday[ot.id] = true;
+                notify(ot.title, i18n("Reminder · %1", ot.time), "appointment-new", {
+                    "persistent": true,
+                    "forceSound": true
+                });
             }
         }
     }
 
-    function notify(title, text, icon) {
-        _run("notify-send --app-name=" + _shq("Schedule Planner") + " --icon=" + _shq(icon || "myschedule") + " " + _shq(title) + " " + _shq(text));
-        if (Plasmoid.configuration.playSound) {
-            // ring a bell so it's audible away from the screen; fall back to paplay
-            _run("canberra-gtk-play -i bell 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null");
+    function playBell() {
+        _run("canberra-gtk-play -i bell 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/bell.oga 2>/dev/null");
+    }
+
+    function notify(title, text, icon, opts) {
+        opts = opts || ({});
+        var cmd = "notify-send --app-name=" + _shq("Schedule Planner") + " --icon=" + _shq(icon || "myschedule");
+        if (opts.persistent) {
+            cmd += " --urgency=critical"; // stays until dismissed; also bypasses Do Not Disturb
+        }
+        cmd += " " + _shq(title) + " " + _shq(text);
+        _run(cmd);
+        if (opts.forceSound || Plasmoid.configuration.playSound) {
+            _soundThisTick = true;
         }
     }
 

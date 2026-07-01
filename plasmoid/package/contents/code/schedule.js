@@ -53,6 +53,25 @@ function normalize(obj) {
 
 function normalizeTask(t) {
     if (!t || typeof t !== "object") return null;
+    var id = t.id ? String(t.id) : genId();
+    var title = t.title ? String(t.title) : "Untitled";
+    var color = isValidColor(t.color) ? t.color : "#3daee9";
+    var notify = (typeof t.notify === "boolean") ? t.notify : true;
+
+    // One-time task: a point-in-time reminder (a date + a notification time),
+    // NOT a range. The blank days/start/end keep it out of the weekday timeline
+    // and the widget's current-task logic — it only ever fires a notification.
+    if (isValidDate(t.date)) {
+        var time = isValidTime(t.time) ? t.time : (isValidTime(t.start) ? t.start : null);
+        if (!time) return null;
+        return {
+            id: id, title: title, color: color, notify: notify,
+            date: t.date, time: time,
+            days: [], start: "", end: "", isBreak: false, leadMinutes: 0
+        };
+    }
+
+    // Recurring task: a weekday range block.
     if (!isValidTime(t.start) || !isValidTime(t.end)) return null;
     if (toMinutes(t.end) <= toMinutes(t.start)) return null;
     var days = [];
@@ -64,19 +83,25 @@ function normalizeTask(t) {
     }
     days.sort();
     return {
-        id: t.id ? String(t.id) : genId(),
-        title: t.title ? String(t.title) : "Untitled",
-        color: isValidColor(t.color) ? t.color : "#3daee9",
+        id: id,
+        title: title,
+        color: color,
         days: days,
         start: t.start,
         end: t.end,
         isBreak: !!t.isBreak,
         // notify when the block starts; lead = minutes BEFORE start to fire it
         // (e.g. gym 18:00 with leadMinutes 15 → reminder at 17:45).
-        notify: (typeof t.notify === "boolean") ? t.notify : true,
+        notify: notify,
         leadMinutes: (isFiniteNum(t.leadMinutes) && t.leadMinutes >= 0)
-            ? Math.floor(t.leadMinutes) : 0
+            ? Math.floor(t.leadMinutes) : 0,
+        date: "", time: ""
     };
+}
+
+// Is this a one-time (dated) reminder rather than a recurring block?
+function isOneTime(task) {
+    return !!(task && task.date);
 }
 
 // The minute-of-day at which a task's start reminder should fire.
@@ -109,6 +134,15 @@ function isValidColor(c) {
     return typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c);
 }
 
+// "YYYY-MM-DD" (a real calendar date). Used only by one-time tasks.
+function isValidDate(s) {
+    if (typeof s !== "string") return false;
+    var m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(s);
+    if (!m) return false;
+    var mo = parseInt(m[2], 10), da = parseInt(m[3], 10);
+    return mo >= 1 && mo <= 12 && da >= 1 && da <= 31;
+}
+
 function toMinutes(hhmm) {
     var m = /^([0-9]{1,2}):([0-9]{2})$/.exec(hhmm);
     if (!m) return 0;
@@ -116,6 +150,11 @@ function toMinutes(hhmm) {
 }
 
 function pad2(n) { return (n < 10 ? "0" : "") + n; }
+
+// Local calendar date of a JS Date as "YYYY-MM-DD".
+function formatDate(date) {
+    return date.getFullYear() + "-" + pad2(date.getMonth() + 1) + "-" + pad2(date.getDate());
+}
 
 function minutesToHHMM(min) {
     min = ((min % 1440) + 1440) % 1440;
@@ -149,7 +188,8 @@ function tasksForDay(schedule, iso) {
     var out = [];
     var tasks = (schedule && schedule.tasks) || [];
     for (var i = 0; i < tasks.length; i++) {
-        if (tasks[i].days.indexOf(iso) !== -1) out.push(tasks[i]);
+        var days = tasks[i].days;
+        if (days && days.indexOf(iso) !== -1) out.push(tasks[i]);
     }
     out.sort(function (a, b) {
         var d = toMinutes(a.start) - toMinutes(b.start);
@@ -158,9 +198,36 @@ function tasksForDay(schedule, iso) {
     return out;
 }
 
-// Convenience: today's tasks for a Date.
+// Convenience: today's RECURRING tasks for a Date (one-time tasks excluded —
+// they have no weekday and never appear in the timeline/current-task logic).
 function tasksForDate(schedule, date) {
     return tasksForDay(schedule, isoDay(date));
+}
+
+// One-time reminders falling on the given calendar Date, sorted by time.
+function oneTimeTasksOnDate(schedule, date) {
+    var key = formatDate(date);
+    var out = [];
+    var tasks = (schedule && schedule.tasks) || [];
+    for (var i = 0; i < tasks.length; i++) {
+        if (tasks[i].date === key) out.push(tasks[i]);
+    }
+    out.sort(function (a, b) { return toMinutes(a.time) - toMinutes(b.time); });
+    return out;
+}
+
+// All one-time reminders, sorted by date then time (for the planner list).
+function oneTimeTasks(schedule) {
+    var out = [];
+    var tasks = (schedule && schedule.tasks) || [];
+    for (var i = 0; i < tasks.length; i++) {
+        if (isOneTime(tasks[i])) out.push(tasks[i]);
+    }
+    out.sort(function (a, b) {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return toMinutes(a.time) - toMinutes(b.time);
+    });
+    return out;
 }
 
 // The task active right now (start <= now < end). Strictly-sequential model:
@@ -263,6 +330,32 @@ function makeEntry(kind, task, startMin, endMin) {
     };
 }
 
+// Timeline for a specific calendar Date: the recurring weekday timeline PLUS
+// any one-time reminders on that date, overlaid as zero-duration "reminder"
+// point markers, sorted in by time. Used by the widget's click-through popup.
+function timelineForDate(schedule, date, dayStartMin, dayEndMin) {
+    var entries = timeline(schedule, isoDay(date), dayStartMin, dayEndMin);
+    var reminders = oneTimeTasksOnDate(schedule, date);
+    for (var i = 0; i < reminders.length; i++) {
+        var m = toMinutes(reminders[i].time);
+        entries.push({
+            kind: "reminder",
+            task: reminders[i],
+            start: reminders[i].time,
+            end: reminders[i].time,
+            startMin: m,
+            endMin: m
+        });
+    }
+    entries.sort(function (a, b) {
+        if (a.startMin !== b.startMin) return a.startMin - b.startMin;
+        // at the same minute, show the block/free before the point reminder
+        var rank = function (e) { return e.kind === "reminder" ? 1 : 0; };
+        return rank(a) - rank(b);
+    });
+    return entries;
+}
+
 // Overlap conflicts (for the planner to warn about). Returns array of pairs
 // { day, a, b } where two tasks scheduled on the same weekday overlap in time.
 function conflicts(schedule) {
@@ -299,6 +392,9 @@ var API = {
     normalizeTask: normalizeTask,
     isValidTime: isValidTime,
     isValidColor: isValidColor,
+    isValidDate: isValidDate,
+    formatDate: formatDate,
+    isOneTime: isOneTime,
     toMinutes: toMinutes,
     minutesToHHMM: minutesToHHMM,
     isoDay: isoDay,
@@ -306,6 +402,8 @@ var API = {
     genId: genId,
     tasksForDay: tasksForDay,
     tasksForDate: tasksForDate,
+    oneTimeTasksOnDate: oneTimeTasksOnDate,
+    oneTimeTasks: oneTimeTasks,
     currentTask: currentTask,
     nextTask: nextTask,
     progress: progress,
@@ -314,6 +412,7 @@ var API = {
     reminderMinute: reminderMinute,
     effectiveEndMinute: effectiveEndMinute,
     timeline: timeline,
+    timelineForDate: timelineForDate,
     conflicts: conflicts,
     rangeLabel: rangeLabel,
     dayName: dayName

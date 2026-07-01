@@ -134,5 +134,49 @@ eq(lastLate.endMin, 24 * 60, "block occupies through end of day");
 eq(S.effectiveEndMinute(S.normalizeTask({ days: [1], start: "09:00", end: "11:00" })),
    11 * 60, "non-23:59 end unchanged");
 
+// --- one-time (dated) reminders ---
+ok(S.isValidDate("2026-07-05") && !S.isValidDate("2026-7-5") && !S.isValidDate("nope"), "isValidDate");
+eq(S.formatDate(new Date(2026, 6, 5, 9, 0)), "2026-07-05", "formatDate");
+
+const otSched = S.normalize({
+    settings: {},
+    tasks: [
+        { id: "rec", title: "Deep Work", days: [1, 2, 3, 4, 5], start: "09:00", end: "11:00" },
+        { id: "appt", title: "Dentist", color: "#da4453", date: "2026-07-05", time: "14:30" },
+        { id: "badot", title: "No time", date: "2026-07-06" } // no time/start -> dropped
+    ]
+});
+eq(otSched.tasks.length, 2, "one-time without a time is dropped");
+const appt = otSched.tasks.filter(t => t.id === "appt")[0];
+ok(S.isOneTime(appt), "isOneTime true for dated task");
+eq(appt.time, "14:30", "one-time keeps its notification time");
+eq(appt.days, [], "one-time has no weekdays");
+eq(appt.start, "", "one-time has no start range");
+
+// one-time tasks NEVER show up in the weekday/current-task/timeline logic
+const jul5 = new Date(2026, 6, 5, 14, 30); // a Sunday
+ok(S.currentTask(otSched, jul5) === null, "one-time is not a 'current task' on the widget");
+eq(S.tasksForDate(otSched, jul5).length, 0, "one-time excluded from tasksForDate");
+eq(S.timeline(otSched, S.isoDay(jul5), 0, 1440).filter(e => e.kind === "task").length, 0,
+   "one-time excluded from the timeline");
+
+// but they are queryable by date and in aggregate
+eq(S.oneTimeTasksOnDate(otSched, jul5).map(t => t.id), ["appt"], "oneTimeTasksOnDate finds it");
+eq(S.oneTimeTasksOnDate(otSched, new Date(2026, 6, 6)).length, 0, "none on a different date");
+eq(S.oneTimeTasks(otSched).map(t => t.id), ["appt"], "oneTimeTasks lists dated reminders only");
+
+// timelineForDate overlays one-time reminders as point markers on their date
+const tlJul5 = S.timelineForDate(otSched, jul5, 6 * 60, 23 * 60);
+const rem = tlJul5.filter(e => e.kind === "reminder");
+eq(rem.map(e => e.task.id), ["appt"], "reminder appears on its date's timeline");
+eq(rem[0].startMin, rem[0].endMin, "reminder is a zero-duration point");
+eq(rem[0].start, "14:30", "reminder shows its time");
+// not on a different date
+eq(S.timelineForDate(otSched, new Date(2026, 6, 6), 6 * 60, 23 * 60).filter(e => e.kind === "reminder").length,
+   0, "reminder absent on a different date");
+// recurring 'rec' is Mon-Fri; Jul 5 2026 is a Sunday, so only free + the reminder
+ok(tlJul5.some(e => e.kind === "reminder") && !tlJul5.some(e => e.kind === "task"),
+   "Sunday timeline has the reminder but no recurring block");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

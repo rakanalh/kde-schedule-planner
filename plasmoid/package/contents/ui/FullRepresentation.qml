@@ -34,7 +34,8 @@ PlasmaComponents.Page {
             return [];
         }
         var cfg = plasmoidItem.Plasmoid.configuration;
-        return Sched.timeline(plasmoidItem.schedule, selectedIso, cfg.timelineStartHour * 60, cfg.timelineEndHour * 60);
+        // date-aware: recurring blocks + one-time reminders for the shown day
+        return Sched.timelineForDate(plasmoidItem.schedule, selectedDate, cfg.timelineStartHour * 60, cfg.timelineEndHour * 60);
     }
     // "now" highlighting only makes sense when looking at today
     readonly property var currentTask: (plasmoidItem && isToday) ? plasmoidItem.currentTask : null
@@ -112,11 +113,13 @@ PlasmaComponents.Page {
             width: ListView.view.width
 
             readonly property bool isTask: modelData.kind === "task"
+            readonly property bool isReminder: modelData.kind === "reminder"
+            readonly property bool isColored: isTask || isReminder
             readonly property var task: modelData.task
             readonly property bool isBreak: isTask && task.isBreak
             readonly property bool isCurrent: isTask && full.currentTask && task.id === full.currentTask.id
-            // a task whose end time has already passed today (only when viewing today)
-            readonly property bool isPast: full.isToday && isTask && full.nowMin >= modelData.endMin
+            // a block/reminder whose time has already passed (only when viewing today)
+            readonly property bool isPast: full.isToday && isColored && full.nowMin >= modelData.endMin
 
             implicitHeight: rowLayout.implicitHeight + Kirigami.Units.smallSpacing * 2
 
@@ -151,6 +154,7 @@ PlasmaComponents.Page {
                         font.bold: entryDelegate.isCurrent
                     }
                     QQC2.Label {
+                        visible: !entryDelegate.isReminder
                         text: entryDelegate.modelData.end
                         font.family: "monospace"
                         font.pointSize: Kirigami.Theme.smallFont.pointSize
@@ -158,15 +162,15 @@ PlasmaComponents.Page {
                     }
                 }
 
-                // colored rail
+                // colored rail (a thin marker for point reminders)
                 Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                     Layout.fillHeight: true
                     Layout.minimumHeight: Kirigami.Units.gridUnit * 1.6
                     implicitWidth: Kirigami.Units.smallSpacing
                     radius: width / 2
-                    color: entryDelegate.isTask ? entryDelegate.task.color : Kirigami.Theme.disabledTextColor
-                    opacity: entryDelegate.isTask ? 1 : 0.4
+                    color: entryDelegate.isColored ? entryDelegate.task.color : Kirigami.Theme.disabledTextColor
+                    opacity: entryDelegate.isColored ? 1 : 0.4
                 }
 
                 // title + meta
@@ -181,13 +185,19 @@ PlasmaComponents.Page {
                             implicitWidth: Kirigami.Units.iconSizes.small
                             implicitHeight: Kirigami.Units.iconSizes.small
                         }
+                        Kirigami.Icon {
+                            visible: entryDelegate.isReminder
+                            source: "appointment-new"
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: Kirigami.Units.iconSizes.small
+                        }
                         QQC2.Label {
                             Layout.fillWidth: true
                             elide: Text.ElideRight
-                            text: entryDelegate.isTask ? entryDelegate.task.title : i18n("Free")
+                            text: entryDelegate.isColored ? entryDelegate.task.title : i18n("Free")
                             font.bold: entryDelegate.isCurrent
                             font.strikeout: entryDelegate.isPast
-                            opacity: entryDelegate.isTask ? 1 : 0.5
+                            opacity: entryDelegate.isColored ? 1 : 0.5
                         }
                         PlasmaComponents.Label {
                             visible: entryDelegate.isCurrent

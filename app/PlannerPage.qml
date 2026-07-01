@@ -40,15 +40,21 @@ Kirigami.ScrollablePage {
     // default preview day = today
     property int previewIso: Sched.isoDay(new Date())
 
-    readonly property var allTasks: {
-        // flat list ordered chronologically by time of day (start, then end)
-        var t = (schedule && schedule.tasks) ? schedule.tasks.slice() : [];
+    // recurring weekday blocks, ordered by time of day
+    readonly property var recurringTasks: {
+        var all = (schedule && schedule.tasks) ? schedule.tasks : [];
+        var t = [];
+        for (var i = 0; i < all.length; i++)
+            if (!Sched.isOneTime(all[i]))
+                t.push(all[i]);
         t.sort(function (a, b) {
             var d = Sched.toMinutes(a.start) - Sched.toMinutes(b.start);
             return d !== 0 ? d : Sched.toMinutes(a.end) - Sched.toMinutes(b.end);
         });
         return t;
     }
+    // one-time reminders, ordered by date then time
+    readonly property var onceTasks: schedule ? Sched.oneTimeTasks(schedule) : []
 
     actions: [
         Kirigami.Action {
@@ -111,18 +117,12 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
         }
 
-        // ---- all task blocks ----
-        Kirigami.Heading {
-            level: 3
-            text: i18n("All blocks")
-        }
-
         Kirigami.PlaceholderMessage {
             Layout.fillWidth: true
-            visible: page.allTasks.length === 0
+            visible: page.recurringTasks.length === 0 && page.onceTasks.length === 0
             icon.name: "view-calendar-day"
-            text: i18n("No blocks yet")
-            explanation: i18n("Add your first time block to start planning your day.")
+            text: i18n("No tasks yet")
+            explanation: i18n("Add your first block or one-time reminder to start planning.")
             helpfulAction: Kirigami.Action {
                 text: i18n("Add task")
                 icon.name: "list-add"
@@ -130,73 +130,111 @@ Kirigami.ScrollablePage {
             }
         }
 
+        // ---- recurring blocks ----
+        Kirigami.Heading {
+            level: 3
+            visible: page.recurringTasks.length > 0
+            text: i18n("Recurring blocks")
+        }
         Repeater {
-            model: page.allTasks
-            delegate: Kirigami.AbstractCard {
-                required property var modelData
-                Layout.fillWidth: true
+            model: page.recurringTasks
+            delegate: taskCard
+        }
 
-                contentItem: RowLayout {
-                    spacing: Kirigami.Units.largeSpacing
+        // ---- one-time reminders ----
+        Kirigami.Heading {
+            level: 3
+            visible: page.onceTasks.length > 0
+            text: i18n("One-time reminders")
+        }
+        Repeater {
+            model: page.onceTasks
+            delegate: taskCard
+        }
+    }
 
-                    Rectangle {
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Kirigami.Units.gridUnit * 0.6
-                        implicitHeight: Kirigami.Units.gridUnit * 2.2
-                        radius: width / 2
-                        color: modelData.color
-                    }
+    // shared card for both recurring blocks and one-time reminders
+    Component {
+        id: taskCard
+        Kirigami.AbstractCard {
+            required property var modelData
+            Layout.fillWidth: true
 
-                    ColumnLayout {
+            contentItem: RowLayout {
+                spacing: Kirigami.Units.largeSpacing
+
+                Rectangle {
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: Kirigami.Units.gridUnit * 0.6
+                    implicitHeight: Kirigami.Units.gridUnit * 2.2
+                    radius: width / 2
+                    color: modelData.color
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 0
+                    RowLayout {
                         Layout.fillWidth: true
-                        spacing: 0
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
-                            Kirigami.Icon {
-                                visible: modelData.isBreak
-                                source: "media-playback-pause"
-                                implicitWidth: Kirigami.Units.iconSizes.small
-                                implicitHeight: Kirigami.Units.iconSizes.small
-                            }
-                            Kirigami.Heading {
-                                level: 4
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                                text: modelData.title
-                            }
+                        spacing: Kirigami.Units.smallSpacing
+                        Kirigami.Icon {
+                            visible: modelData.isBreak
+                            source: "media-playback-pause"
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: Kirigami.Units.iconSizes.small
                         }
-                        QQC2.Label {
+                        Kirigami.Icon {
+                            visible: Sched.isOneTime(modelData)
+                            source: "appointment-new"
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: Kirigami.Units.iconSizes.small
+                        }
+                        Kirigami.Heading {
+                            level: 4
                             Layout.fillWidth: true
                             elide: Text.ElideRight
-                            opacity: 0.7
-                            text: Sched.rangeLabel(modelData) + "  ·  " + daysLabel(modelData.days)
+                            text: modelData.title
                         }
                     }
+                    QQC2.Label {
+                        Layout.fillWidth: true
+                        elide: Text.ElideRight
+                        opacity: 0.7
+                        text: page.subtitle(modelData)
+                    }
+                }
 
-                    // pin the action buttons to the right edge of every card
-                    RowLayout {
-                        Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                        spacing: Kirigami.Units.smallSpacing
+                // pin the action buttons to the right edge of every card
+                RowLayout {
+                    Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                    spacing: Kirigami.Units.smallSpacing
 
-                        QQC2.ToolButton {
-                            display: QQC2.AbstractButton.IconOnly
-                            icon.name: "document-edit"
-                            QQC2.ToolTip.text: i18n("Edit")
-                            QQC2.ToolTip.visible: hovered
-                            onClicked: page.editRequested(modelData)
-                        }
-                        QQC2.ToolButton {
-                            display: QQC2.AbstractButton.IconOnly
-                            icon.name: "edit-delete"
-                            QQC2.ToolTip.text: i18n("Delete")
-                            QQC2.ToolTip.visible: hovered
-                            onClicked: page.deleteRequested(modelData.id)
-                        }
+                    QQC2.ToolButton {
+                        display: QQC2.AbstractButton.IconOnly
+                        icon.name: "document-edit"
+                        QQC2.ToolTip.text: i18n("Edit")
+                        QQC2.ToolTip.visible: hovered
+                        onClicked: page.editRequested(modelData)
+                    }
+                    QQC2.ToolButton {
+                        display: QQC2.AbstractButton.IconOnly
+                        icon.name: "edit-delete"
+                        QQC2.ToolTip.text: i18n("Delete")
+                        QQC2.ToolTip.visible: hovered
+                        onClicked: page.deleteRequested(modelData.id)
                     }
                 }
             }
         }
+    }
+
+    function subtitle(task) {
+        if (Sched.isOneTime(task)) {
+            var p = task.date.split("-");
+            var dt = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+            return task.time + "  ·  " + Qt.formatDate(dt, "ddd, d MMM yyyy");
+        }
+        return Sched.rangeLabel(task) + "  ·  " + daysLabel(task.days);
     }
 
     function daysLabel(days) {

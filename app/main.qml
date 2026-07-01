@@ -63,18 +63,23 @@ Kirigami.ApplicationWindow {
     }
 
     function addOrUpdateTask(task) {
+        // normalize immediately so the in-memory task always has the full shape
+        // (recurring and one-time tasks have different fields)
+        var norm = Sched.normalizeTask(task);
+        if (!norm)
+            return;
         var tasks = schedule.tasks.slice();
         var idx = -1;
         for (var i = 0; i < tasks.length; i++) {
-            if (tasks[i].id === task.id) {
+            if (tasks[i].id === norm.id) {
                 idx = i;
                 break;
             }
         }
         if (idx >= 0)
-            tasks[idx] = task;
+            tasks[idx] = norm;
         else
-            tasks.push(task);
+            tasks.push(norm);
         schedule.tasks = tasks;
         commit();
     }
